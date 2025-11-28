@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Admin Panel</title>
+
+<style>
+body{background:#0a0a0a;color:#fff;font-family:Arial;padding:20px;}
+.box{background:#111;padding:20px;border-radius:15px;width:400px;margin:auto;margin-bottom:20px;}
+input,select,button{width:100%;padding:12px;margin-top:10px;border-radius:10px;border:none;}
+button{background:#00ff88;color:#000;font-weight:bold;cursor:pointer;}
+.user-list{background:#222;padding:15px;border-radius:10px;margin-top:20px;}
+.user-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #333;}
+.user-item button{width:auto;padding:5px 10px;background:#ff4444;color:#fff;}
+</style>
+</head>
+
+<body>
+
+<h2 style="text-align:center;">Admin Panel</h2>
+
+<div class="box">
+    <h3>Create User Access</h3>
+
+    <input type="text" id="userid" placeholder="Enter User ID (username)">
+    <button onclick="generatePass()">Generate Password</button>
+
+    <input type="text" id="password" placeholder="Generated password" readonly>
+
+<select id="days">
+    <option value="0.0035">5 Minutes</option> <!-- 5 min ≈ 0.0035 day -->
+    <option value="1">1 Day</option>
+    <option value="3">3 Days</option>
+    <option value="5">5 Days</option>
+    <option value="7">7 Days</option>
+    <option value="10">10 Days</option>
+    <option value="30">30 Days</option>
+    <option value="60">60 Days</option>
+    <option value="365">365 Days</option>
+</select>
+    <button onclick="saveUser()">Save User</button>
+
+    <p id="msg"></p>
+</div>
+
+<div class="box">
+    <h3>Existing Users</h3>
+    <div id="userList" class="user-list">
+        Loading users...
+    </div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCDcnQTzr2XpyEoptF2vexQbmWiBrFx-jU",
+  authDomain: "bunny-58bb8.firebaseapp.com",
+  databaseURL: "https://bunny-58bb8-default-rtdb.firebaseio.com",
+  projectId: "bunny-58bb8",
+  storageBucket: "bunny-58bb8.firebasestorage.app",
+  messagingSenderId: "662191659210",
+  appId: "1:662191659210:web:775e192d5c34fd6603fc33",
+  measurementId: "G-QRTD6MWM4T"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// Generate random password
+function generatePass(){
+    let pass = Math.random().toString(36).substring(2,8).toUpperCase();
+    document.getElementById("password").value = pass;
+}
+
+// Save user to Firebase
+function saveUser(){
+    let user = document.getElementById("userid").value.trim();
+    let pass = document.getElementById("password").value.trim();
+    let days = document.getElementById("days").value;
+    let msg = document.getElementById("msg");
+
+    if(user === "" || pass === ""){
+        msg.style.color = "#ff4444";
+        msg.innerHTML = "Fill all fields!";
+        return;
+    }
+
+    let expiry = Date.now() + (days * 24 * 60 * 60 * 1000);
+
+    db.ref("users/" + user).set({
+        password: pass,
+        expiry: expiry,
+        used: false  // <-- mark as unused initially
+    });
+
+    msg.style.color = "#00ff00";
+    msg.innerHTML = "User Created Successfully!";
+    document.getElementById("userid").value = "";
+    document.getElementById("password").value = "";
+
+    loadUsers();
+}
+
+// Load existing users
+function loadUsers(){
+    const userList = document.getElementById("userList");
+    userList.innerHTML = "Loading users...";
+
+    db.ref("users").once("value", snapshot => {
+        userList.innerHTML = "";
+        if(snapshot.exists()){
+            snapshot.forEach(child => {
+                const user = child.key;
+                const pass = child.val().password;
+                const expiry = new Date(child.val().expiry).toLocaleString();
+                const used = child.val().used ? "Yes" : "No";
+
+                const div = document.createElement("div");
+                div.className = "user-item";
+                div.innerHTML = `
+                    <span>${user} | ${pass} | Exp: ${expiry} | Used: ${used}</span>
+                    <button onclick="deleteUser('${user}')">Delete</button>
+                `;
+                userList.appendChild(div);
+            });
+        } else {
+            userList.innerHTML = "No users found.";
+        }
+    });
+}
+
+// Delete user
+function deleteUser(user){
+    if(confirm("Are you sure you want to delete " + user + "?")){
+        db.ref("users/" + user).remove();
+        loadUsers();
+    }
+}
+
+// Example login check for one-time-use users
+function loginUser(user, pass){
+    db.ref("users/" + user).once("value", snapshot => {
+        if(snapshot.exists()){
+            const data = snapshot.val();
+            if(data.password === pass){
+                if(data.used){
+                    alert("This user has already been used on another device!");
+                } else if(Date.now() > data.expiry){
+                    alert("This user has expired!");
+                } else {
+                    alert("Login successful!");
+                    // Mark as used
+                    db.ref("users/" + user).update({used: true});
+                }
+            } else {
+                alert("Incorrect password!");
+            }
+        } else {
+            alert("User not found!");
+        }
+    });
+}
+
+// Initial load
+loadUsers();
+</script>
+
+</body>
+</html>
