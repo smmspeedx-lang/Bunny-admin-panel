@@ -3,23 +3,109 @@
 <head>
 <title>Admin Panel</title>
 
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
-body{background:#0a0a0a;color:#fff;font-family:Arial;padding:20px;}
-.box{background:#111;padding:20px;border-radius:15px;width:400px;margin:auto;margin-bottom:20px;}
-input,select,button{width:100%;padding:12px;margin-top:10px;border-radius:10px;border:none;}
-button{background:#00ff88;color:#000;font-weight:bold;cursor:pointer;}
-.user-list{background:#222;padding:15px;border-radius:10px;margin-top:20px;}
-.user-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #333;}
-.user-item button{width:auto;padding:5px 10px;background:#ff4444;color:#fff;}
+body{
+    background:#0a0a0a;
+    color:#fff;
+    font-family:Arial, sans-serif;
+    padding:15px;
+    margin:0;
+}
+
+/* Center title */
+h2{
+    text-align:center;
+    font-size:22px;
+    margin-bottom:20px;
+}
+
+/* Mobile Responsive Box */
+.box{
+    background:#111;
+    padding:18px;
+    border-radius:15px;
+    width:100%;
+    max-width:450px;
+    margin:auto;
+    margin-bottom:20px;
+    box-sizing:border-box;
+}
+
+/* Inputs / Buttons */
+input, select, button{
+    width:100%;
+    padding:14px;
+    margin-top:10px;
+    border-radius:10px;
+    border:none;
+    font-size:16px;
+    box-sizing:border-box;
+}
+
+button{
+    background:#00ff88;
+    color:#000;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+button:active{
+    transform:scale(0.97);
+}
+
+/* User List */
+.user-list{
+    background:#222;
+    padding:12px;
+    border-radius:10px;
+    margin-top:15px;
+    font-size:14px;
+}
+
+.user-item{
+    display:flex;
+    flex-direction:column;
+    background:#111;
+    padding:10px;
+    border-radius:10px;
+    margin-bottom:10px;
+}
+
+.user-item span{
+    margin-bottom:8px;
+    line-height:20px;
+}
+
+.user-item button{
+    width:100%;
+    padding:10px;
+    background:#ff4444;
+    margin-top:5px;
+    font-size:14px;
+    border-radius:8px;
+}
+
+/* Improve text wrapping */
+.user-item span{
+    word-wrap:break-word;
+}
+
+/* Small device optimization */
+@media (max-width:400px){
+    h2{ font-size:20px; }
+    input, select, button{ font-size:15px; }
+}
 </style>
 </head>
 
 <body>
 
-<h2 style="text-align:center;">Admin Panel</h2>
+<h2>Admin Panel</h2>
 
 <div class="box">
-    <h3>Create User Access</h3>
+    <h3 style="margin-top:0;">Create User Access</h3>
 
     <input type="text" id="userid" placeholder="Enter User ID (username)">
     <button onclick="generatePass()">Generate Password</button>
@@ -27,7 +113,7 @@ button{background:#00ff88;color:#000;font-weight:bold;cursor:pointer;}
     <input type="text" id="password" placeholder="Generated password" readonly>
 
 <select id="days">
-    <option value="0.0035">5 Minutes</option> <!-- 5 min ≈ 0.0035 day -->
+    <option value="0.0035">5 Minutes</option>
     <option value="1">1 Day</option>
     <option value="3">3 Days</option>
     <option value="5">5 Days</option>
@@ -37,13 +123,14 @@ button{background:#00ff88;color:#000;font-weight:bold;cursor:pointer;}
     <option value="60">60 Days</option>
     <option value="365">365 Days</option>
 </select>
+
     <button onclick="saveUser()">Save User</button>
 
     <p id="msg"></p>
 </div>
 
 <div class="box">
-    <h3>Existing Users</h3>
+    <h3 style="margin-top:0;">Existing Users</h3>
     <div id="userList" class="user-list">
         Loading users...
     </div>
@@ -68,13 +155,13 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// Generate random password
+// Generate Password
 function generatePass(){
     let pass = Math.random().toString(36).substring(2,8).toUpperCase();
     document.getElementById("password").value = pass;
 }
 
-// Save user to Firebase
+// Save User
 function saveUser(){
     let user = document.getElementById("userid").value.trim();
     let pass = document.getElementById("password").value.trim();
@@ -92,7 +179,7 @@ function saveUser(){
     db.ref("users/" + user).set({
         password: pass,
         expiry: expiry,
-        used: false  // <-- mark as unused initially
+        used: false
     });
 
     msg.style.color = "#00ff00";
@@ -103,7 +190,7 @@ function saveUser(){
     loadUsers();
 }
 
-// Load existing users
+// Load Users
 function loadUsers(){
     const userList = document.getElementById("userList");
     userList.innerHTML = "Loading users...";
@@ -120,8 +207,8 @@ function loadUsers(){
                 const div = document.createElement("div");
                 div.className = "user-item";
                 div.innerHTML = `
-                    <span>${user} | ${pass} | Exp: ${expiry} | Used: ${used}</span>
-                    <button onclick="deleteUser('${user}')">Delete</button>
+                    <span><b>${user}</b><br>Password: ${pass}<br>Expiry: ${expiry}<br>Used: ${used}</span>
+                    <button onclick="deleteUser('${user}')">Delete User</button>
                 `;
                 userList.appendChild(div);
             });
@@ -131,7 +218,7 @@ function loadUsers(){
     });
 }
 
-// Delete user
+// Delete User
 function deleteUser(user){
     if(confirm("Are you sure you want to delete " + user + "?")){
         db.ref("users/" + user).remove();
@@ -139,19 +226,18 @@ function deleteUser(user){
     }
 }
 
-// Example login check for one-time-use users
+// Mark User Used
 function loginUser(user, pass){
     db.ref("users/" + user).once("value", snapshot => {
         if(snapshot.exists()){
             const data = snapshot.val();
             if(data.password === pass){
                 if(data.used){
-                    alert("This user has already been used on another device!");
+                    alert("This user has already been used!");
                 } else if(Date.now() > data.expiry){
                     alert("This user has expired!");
                 } else {
                     alert("Login successful!");
-                    // Mark as used
                     db.ref("users/" + user).update({used: true});
                 }
             } else {
@@ -163,7 +249,6 @@ function loginUser(user, pass){
     });
 }
 
-// Initial load
 loadUsers();
 </script>
 
